@@ -6,6 +6,7 @@ var speed: int = 300
 @export var area: Area2D
 var areas: Array[Area2D]
 var steering_speed: float = 1.5
+@onready var root = get_parent().get_parent()
 
 func _ready() -> void:
 	desdir = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1))
@@ -15,28 +16,25 @@ func _ready() -> void:
 	$Sprite2D.rotation = velocity.angle()
 	move_and_slide()
 
-func _process(delta: float) -> void:
+func _physics_process(delta: float) -> void:
 	_overflow()
-	areas = area.get_overlapping_areas()
-	$VelocityLine.set_point_position(1, velocity.normalized() * 210)
 	
-	desdir += _separation()
-	desdir += _alignment()
-	desdir += _cohesion()
+	areas = area.get_overlapping_areas()
+	
+	$Area2D.scale = Vector2(1, 1) * root.radius_size
+	
+	var separation: Vector2 = _separation() * root.separation_weight
+	var alignment: Vector2 = _alignment() * root.alignment_weight
+	var cohesion: Vector2 = _cohesion() * root.cohesion_weight
+	
+	desdir += separation
+	desdir += alignment
+	desdir += cohesion
 	
 	desdir = desdir.normalized()
 	
-	var cross = velocity.cross(desdir)
-	if (cross > 0):
-		print("right")
-		$Sprite2D.rotation += deg_to_rad(steering_speed)
-	elif (cross < 0):
-		$Sprite2D.rotation -= deg_to_rad(steering_speed)
-	else:
-		print("nowhere")
+	velocity = _maketurn()
 	
-	desdir = Vector2.RIGHT.rotated($Sprite2D.rotation).normalized()
-	velocity = desdir * speed
 	move_and_slide()
 
 func _separation():
@@ -67,12 +65,18 @@ func _cohesion():
 	return dir
 
 func _overflow():
-	if (global_position.x > get_viewport().size.x):
-		global_position.x = 0
-	elif (global_position.x < 0):
-		global_position.x = get_viewport().size.x
-		
-	if (global_position.y > get_viewport().size.y):
-		global_position.y = 0
-	elif (global_position.y < 0):
-		global_position.y = get_viewport().size.y
+	global_position.x = wrap(global_position.x, 0, get_viewport().size.x)
+	global_position.y = wrap(global_position.y, get_viewport().size.y, 0)
+
+func _maketurn():
+	var _velocity: Vector2
+	
+	var cross = velocity.cross(desdir)
+	if (cross > 0):
+		$Sprite2D.rotation += deg_to_rad(steering_speed)
+	elif (cross < 0):
+		$Sprite2D.rotation -= deg_to_rad(steering_speed)
+	
+	desdir = Vector2.RIGHT.rotated($Sprite2D.rotation).normalized()
+	_velocity = desdir * speed
+	return _velocity
