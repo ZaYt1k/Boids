@@ -8,6 +8,51 @@ var areas: Array[Area2D]
 var steering_speed: float = 1.5
 @onready var root = get_parent().get_parent()
 
+func _separation():
+	var dir = Vector2.ZERO
+	
+	for i in areas:
+		var boid: CharacterBody2D = i.get_parent()
+		var boid_pos: Vector2 = boid.global_position
+		var boid_dir: Vector2 = global_position.direction_to(boid_pos)
+		var boid_dis: float = global_position.distance_to(boid_pos)
+		
+		dir += boid_dir / boid_dis
+	
+	
+	dir = dir * -1
+	dir = dir.normalized()
+	
+	return dir
+
+func _alignment():
+	var dir: Vector2 = Vector2.ZERO
+	
+	for i in areas:
+		var boid = i.get_parent()
+		dir += boid.velocity.normalized()
+	
+	
+	dir = dir.normalized()
+	
+	return dir
+
+func _cohesion():
+	var dir: Vector2 = Vector2.ZERO
+	var avg_pos: Vector2 = Vector2.ZERO
+	var n: int = 0
+	
+	for i in areas:
+		var boid = i.get_parent()
+		avg_pos += boid.global_position
+		n += 1
+	
+	
+	avg_pos = avg_pos / n
+	dir = global_position.direction_to(avg_pos)
+	
+	return dir
+
 func _ready() -> void:
 	desdir = Vector2(rng.randf_range(-1, 1), rng.randf_range(-1, 1))
 	desdir = desdir.normalized()
@@ -36,33 +81,6 @@ func _physics_process(delta: float) -> void:
 	velocity = _maketurn()
 	
 	move_and_slide()
-
-func _separation():
-	var dir = Vector2.ZERO
-	for i in areas:
-		dir += global_position.direction_to(i.get_parent().global_position) / global_position.distance_to(i.get_parent().global_position)
-	dir = dir * -1
-	dir = dir.normalized()
-	return dir
-
-func _alignment():
-	var dir = Vector2.ZERO
-	for i in areas:
-		var par = i.get_parent()
-		dir += par.velocity.normalized()
-	dir = dir.normalized()
-	return dir
-
-func _cohesion():
-	var dir = Vector2.ZERO
-	var j = 0
-	for i in areas:
-		var par = i.get_parent()
-		dir += par.global_position
-		j += 1
-	dir = dir / j
-	dir = global_position.direction_to(dir)
-	return dir
 
 func _overflow():
 	global_position.x = wrap(global_position.x, 0, get_viewport().size.x)
